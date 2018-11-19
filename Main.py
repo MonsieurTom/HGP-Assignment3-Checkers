@@ -6,7 +6,7 @@ import sys
 
 
 class PlayerInfo:  # hold information of the player
-    remaining = 20
+    remaining = 12
     jumps = 0
     timer = QBasicTimer()
     playing = False
@@ -29,9 +29,10 @@ class Piece:
 
 
 class Board(QFrame):
-    gridSize = 10
+    gridSize = 8
     redPiecesList = []
     whitePiecesList = []
+    board = []
     player1 = None
     player2 = None
     x_translation = 0
@@ -43,13 +44,34 @@ class Board(QFrame):
         self.setMinimumWidth(600)
         self.setMinimumHeight(600)
 
-        self.x_translation = self.width() / 10
-        self.y_translation = self.height() / 10
+        self.x_translation = self.width() / self.gridSize
+        self.y_translation = self.height() / self.gridSize
 
         self.initBoard()
         self.update()
 
     def initBoard(self):
+        for i in range(self.gridSize):
+            self.board.append([0] * self.gridSize)
+
+        white = False
+        x = 0
+        while x < self.gridSize:
+            y = 0
+            while y < self.gridSize:
+                if white is False:
+                    self.board[x][y] = 0
+                    white = True
+                else:
+                    self.board[x][y] = 1
+                    white = False
+                y = y + 1
+            if white is True:
+                white = False
+            else:
+                white = True
+            x = x + 1
+
         self.initPieceDictionaries()
         self.initPlayers()
 
@@ -70,14 +92,14 @@ class Board(QFrame):
         redX = 0
         redY = 0
         whiteX = 1
-        whitey = 9
-        while i < 20:
+        whitey = self.gridSize - 1
+        while i < 12:
             self.redPiecesList.append(Piece("red", redX, redY))
             self.whitePiecesList.append(Piece("white", whiteX, whitey))
             i = i + 1
             redX = redX + 2
             whiteX = whiteX + 2
-            if redX >= 10 or whiteX >= 10:
+            if redX >= self.gridSize or whiteX >= self.gridSize:
                 redY = redY + 1
                 whitey = whitey - 1
                 if pair:
@@ -106,43 +128,35 @@ class Board(QFrame):
         pair = False
         for x in range(self.gridSize):
             for y in range(self.gridSize):
-                if pair is True:
-                    if white is True:
-                        color = QColor(255, 255, 255)
-                        white = False
-                    else:
-                        color = QColor(0, 0, 0)
-                        white = True
-                if pair is False:
-                    if white is True:
-                        color = QColor(0, 0, 0)
-                        white = False
-                    else:
-                        color = QColor(255, 255, 255)
-                        white = True
+                if self.board[x][y] == 0:
+                    color = QColor(214, 214, 214)
+                elif self.board[x][y] == 1:
+                    color = QColor(99, 99, 99)
+                elif self.board[x][y] == 2:
+                    color = QColor(69, 139, 116)
 
                 painter.setPen(color)
                 painter.setBrush(color)
-                painter.drawRect(int(x * self.x_translation), int(y * self.y_translation), int(self.x_translation),
-                                 int(self.y_translation))
-            if pair is True:
-                pair = False
-            else:
-                pair = True
+                painter.drawRect(int(x * self.x_translation), int(y * self.y_translation), int(self.x_translation), int(self.y_translation))
 
     def drawPiece(self, painter, piece):
         if piece.alive:
             rect = QRect(piece.x * self.x_translation + 5, piece.y * self.y_translation + 5,
                          int(self.x_translation) - 10, int(self.y_translation) - 10)
-            if piece.team == "red":
-                image = QPixmap("./img/checkers_red_token_normal.png")
-            elif piece.team == "white":
-                image = QPixmap("./img/checkers_white_token_normal.png")
+
+            if piece.team == "red" and piece.king is False:
+                image = QPixmap("./img/red_token_checkers_normal.png")
+            elif piece.team == "red" and piece.king is True:
+                image = QPixmap("./img/red_token_checkers_king.png")
+            elif piece.team == "white" and piece.king is False:
+                image = QPixmap("./img/white_token_checkers_normal.png")
+            elif piece.team == "white" and piece.king is True:
+                image = QPixmap("./img/white_token_checkers_king.png")
             painter.drawPixmap(rect, image)
 
     def resizeEvent(self, event):
-        self.x_translation = self.width() / 10
-        self.y_translation = self.height() / 10
+        self.x_translation = self.width() / self.gridSize
+        self.y_translation = self.height() / self.gridSize
 
 
 class ToolBar(QWidget):
@@ -158,14 +172,16 @@ class ToolBar(QWidget):
 
         # generals widgets
         self.toolbar_title = QLabel("Game Panel")
-        self.toolbar_title.setFont(QFont("Times", 10, QFont.Bold))
-        self.toolbar_title.setAlignment(Qt.AlignTop)
+        self.toolbar_title.setFont(QFont("Times", 20, QFont.Bold))
+        self.toolbar_title.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
 
         # player1 widgets
         self.player1_icon = QLabel()
-        self.player1_icon.setPixmap(QPixmap('./img/checkers_red_token_normal.png'))
-        self.player1_icon.setFixedWidth(30)
-        self.player1_icon.setFixedHeight(30)
+        red_token = QPixmap('./img/red_token_checkers_king.png')
+        red_token = red_token.scaled(100, 100)
+        self.player1_icon.setPixmap(red_token)
+        self.player1_icon.setFixedWidth(100)
+        self.player1_icon.setFixedHeight(100)
         self.player1_your_turn = QLabel("Your turn")
 
         self.player1_header = QHBoxLayout()
@@ -174,7 +190,7 @@ class ToolBar(QWidget):
 
         self.player1_name = QLabel("Player")
         self.player1_time = QLabel("Time Passed: 00:00")
-        self.player1_remaining = QLabel("Remaining: 20")
+        self.player1_remaining = QLabel("Remaining: 12")
         self.player1_jumps = QLabel("Jumps: 0")
 
         self.player1_toolbar = QVBoxLayout()
@@ -188,9 +204,11 @@ class ToolBar(QWidget):
 
         # player2 widgets
         self.player2_icon = QLabel()
-        self.player2_icon.setPixmap(QPixmap('./img/checkers_white_token_normal.png'))
-        self.player2_icon.setFixedWidth(30)
-        self.player2_icon.setFixedHeight(30)
+        white_token = QPixmap('./img/white_token_checkers_king.png')
+        white_token = white_token.scaled(100, 100)
+        self.player2_icon.setPixmap(white_token)
+        self.player2_icon.setFixedWidth(100)
+        self.player2_icon.setFixedHeight(100)
         self.player2_your_turn = QLabel("Your turn")
         self.player2_header = QHBoxLayout()
         self.player2_header.addWidget(self.player2_icon)
@@ -198,7 +216,7 @@ class ToolBar(QWidget):
 
         self.player2_name = QLabel("Opponent")
         self.player2_time = QLabel("Time Passed: 00:00")
-        self.player2_remaining = QLabel("Remaining: 20")
+        self.player2_remaining = QLabel("Remaining: 12")
         self.player2_jumps = QLabel("Jumps: 0")
 
         self.player2_toolbar = QVBoxLayout()
